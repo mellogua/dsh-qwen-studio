@@ -85,6 +85,35 @@ bash deploy-gateway.sh     # 起容器 studio-gateway，监听 :8100
 5. **容器 `--restart no` + 守卫**：宁可 studio 挂，也不要 OOM 杀掉推理服务。
 6. 模型：INT8-ConvRot 四件套约 23 GB（主模型 6.76G + turbo 6.76G + 文本编码器 8.71G + VAE 0.63G）。
 
+## 在 DSH 里直接用
+
+DSH 的 provider 配置里加一段（`~/.dsh/profiles/<profile>/cordis.patch.yml`），
+模型菜单里就会出现 Qwen-Image，选中后像聊天一样出图：
+
+```yaml
+- id: llm-pi-ai
+  config:
+    providers:
+      gb10-image:
+        displayName: GB10 Qwen-Image
+        api: openai-completions
+        baseURL: http://192.168.2.208:8100/v1
+        apiKeyEnv: DEEPSEEK_API_KEY
+        models:
+          - id: qwen-image-2.1
+            name: Qwen-Image-2.1 · 快速（8 步）
+            contextWindow: 8192
+            maxTokens: 1024
+            input: [text]
+          - id: qwen-image-2.1-base
+            name: Qwen-Image-2.1 · 精细（20 步）
+            contextWindow: 8192
+            maxTokens: 1024
+            input: [text]
+```
+
+重启 DSH 后生效。（本仓库的 `plugin/` 是另一种用法：给 agent 注册 `studio_image` 工具，二选一即可。）
+
 ## 可选：DSH 插件
 
 `plugin/` 是一个 DSH Host 插件，注册 `studio_image` 工具，让 agent 直接画图（四台轮询）。
