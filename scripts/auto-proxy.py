@@ -19,7 +19,8 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 UPSTREAM = os.environ.get("AUTO_UPSTREAM", "http://127.0.0.1:8000")
 STUDIO = os.environ.get("AUTO_STUDIO", "http://127.0.0.1:8100")
-PUBLIC_BASE = os.environ.get("AUTO_PUBLIC_BASE", "http://192.168.2.208:8100")
+LAN_BASE = os.environ.get("AUTO_LAN_BASE", "http://192.168.2.208:8100")
+PUBLIC_BASE = os.environ.get("AUTO_PUBLIC_BASE", "https://64.83.27.15:8443")
 
 IMAGE_HINT = re.compile(
     r"(画|绘|生成|渲染)[^，。！？\n]{0,10}(图|照片|海报|插画|头像|壁纸|画面)"
@@ -236,7 +237,11 @@ async def chat(request: Request):
                         args = {}
                     if not str(args.get("prompt") or "").strip():
                         args["prompt"] = last_user_text(body["messages"])
-                    results.append((call.get("id", "call_0"), await render(args)))
+                    res = await render(args)
+                    host = request.headers.get("host", "")
+                    if host and not host.startswith("192.168.") and res.get("url"):
+                        res["url"] = res["url"].replace(LAN_BASE, PUBLIC_BASE)
+                    results.append((call.get("id", "call_0"), res))
                 follow = with_hint(body["messages"]) + [msg] + [
                     {"role": "tool", "tool_call_id": cid, "content": json.dumps(res, ensure_ascii=False)}
                     for cid, res in results
@@ -263,6 +268,7 @@ async def chat(request: Request):
 
 
 @app.api_route("/v1/images/{name}", methods=["GET"])
+@app.api_route("/images/{name}", methods=["GET"])
 async def proxy_image(name: str, request: Request):
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.get(f"{STUDIO}/images/{name}")
