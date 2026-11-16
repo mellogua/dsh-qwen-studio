@@ -1,0 +1,9 @@
+- insert:
+    - id: qwen-studio
+      name: '@local/qwen-studio'
+      config:
+        servers:
+          - http://192.168.2.208:8188
+          - http://192.168.2.28:8188
+          - http://192.168.2.103:8188
+          - http://192.168.2.124:8188
