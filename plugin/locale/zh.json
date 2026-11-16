@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Qwen 图像工作台",
+    "description": "用本地 DGX Spark 上的 Qwen-Image-2.1（gua1 的 ComfyUI）生成图片，并存到工作区。",
+    "detail": "docs/DETAIL.md"
+  }
+}
