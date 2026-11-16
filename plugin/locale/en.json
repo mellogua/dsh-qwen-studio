@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Qwen Image Studio",
+    "description": "Generates images with Qwen-Image-2.1 on the local DGX Spark studio (ComfyUI on gua1) and saves them into the workspace.",
+    "detail": "docs/DETAIL.md"
+  }
+}
