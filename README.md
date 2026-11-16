@@ -67,6 +67,46 @@ sudo systemctl daemon-reload && sudo systemctl restart gb10-public-api-tunnel
 局域网想让 `:8000` 也自动出图，把 vLLM 挪到 `:8001` 再把代理放 `:8000` 即可；
 本方案公网与 DSH 都走 `:8090`，客户端配置零改动。
 
+### 5. 公网图片路由（可选，但公网用户要看到图就必须加）
+
+Caddy 默认只代理 `/v1/` 并校验 Bearer，浏览器打开图片链接不会带 header，所以要在
+`/etc/gb10-public-api/Caddyfile` 的 fallback `handle` 之前加一段免鉴权的只读路由：
+
+```
+    @images {
+        path /images/*
+        method GET
+    }
+    handle @images {
+        reverse_proxy 127.0.0.1:18080 {
+            flush_interval -1
+            transport http {
+                response_header_timeout 60s
+                read_timeout 300s
+            }
+        }
+    }
+```
+
+`caddy validate` → `systemctl reload gb10-public-api`，只热加载，不动其他站点。
+改完 diff 确认只有这一个文件多了 13 行。
+
+代理会按请求的 `Host` 决定返回哪种链接：公网请求给 `https://…:8443/images/…`，局域网请求给
+`http://192.168.2.208:8100/images/…`。
+
+> 带宽：1328² PNG 约 2.7–3.0 MB/张。VPS 是 50 Mbps / 400 GB 月流量，正常用绰绰有余。
+
+## 验收记录（2026-11-17）
+
+| 检查 | 结果 |
+|---|---|
+| 公网 `/v1/models` 无 key / 错 key / 正确 key | 401 / 401 / 200 |
+| 公网流式回答 | 10 个 SSE 帧 + `data: [DONE]` |
+| 公网出图（`帮我画一张：…`） | 42.2 s，回复内是 `https://64.83.27.15:8443/images/…` |
+| 该图片链接（不带 key） | 200 `image/png` 3.0 MB |
+| 局域网旁路 `verify-streaming.sh` | 4/4 通过（models / SSE+DONE / 鉴权透传 / 出图） |
+| VPS 改动范围 | 只改 `Caddyfile`（+13 行），unit、证书、其他站点均未动 |
+
 ## ⚠️ 切换入口前必须做的验证
 
 **模型列表 200 和 `/healthz` 200 不能证明流式可用。** 我们踩过一次：代理返回 `StreamingResponse` 后
